@@ -1,3 +1,5 @@
 # All jupyter notebook checkpoints
 /pycaretTest/.ipynb_checkpoints/*
+/creditRiskRating/.ipynb_checkpoints/*
+
 /pycaretTest/logs.log
