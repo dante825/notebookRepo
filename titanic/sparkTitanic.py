@@ -2,7 +2,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, isnull, when, count, col
 from pyspark.ml.feature import StringIndexer
 from pyspark.ml.feature import VectorAssembler
-from pyspark.ml.classification import RandomForestClassifier
+from pyspark.ml.classification import RandomForestClassifier, LogisticRegression, LinearSVC
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 import matplotlib.pyplot as plt
 from pyspark.mllib.evaluation import MulticlassMetrics
@@ -51,10 +51,27 @@ transformed_data = assembler.transform(dataset)
 # Modeling
 (training_data, test_data) = transformed_data.randomSplit([0.8, 0.2])
 
+# Random Forest
 rf = RandomForestClassifier(labelCol='Survived', featuresCol='features', maxDepth=5, seed=42)
 model = rf.fit(training_data)
 predictions = model.transform(test_data)
 
+# Logistic Regression
+# family options: auto, binomial, multinomial
+# lr = LogisticRegression(labelCol='Survived', featuresCol='features', 
+#                         maxIter=10, regParam=0.3, elasticNetParam=0.8, family='binomial')
+# model = lr.fit(training_data)
+# print(f"Coefficient: {model.coefficients}")
+# print(f"Intercept: {model.intercept}")
+# predictions = model.transform(test_data)
+
+# Linear SVC (SVM)
+# svm = LinearSVC(labelCol='Survived', featuresCol='features', maxIter=10, regParam=0.01)
+# model = svm.fit(training_data)
+# predictions = model.transform(test_data)
+
+
+# Model Evaluation
 evaluator = MulticlassClassificationEvaluator(labelCol='Survived', predictionCol='prediction', metricName='accuracy')
 accuracy = evaluator.evaluate(predictions)
 # print(f'Test accuracy: {accuracy}')
@@ -104,12 +121,7 @@ disp.plot()
 plt.title('Confusion Matrix from sklearn')
 plt.show()
 
-
-# Trying the spark confusion matrix
-# predictionAndLabels = sc.parallelize([(0.0, 0.0), (0.0, 1.0), (0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (1.0, 1.0)])
-# metrics = MulticlassMetrics(predictionAndLabels)
-# print(metrics.confusionMatrix().toArray())
-
+# Pyspark way to get confusion matrix but the display part is using the sklearn ConfusionMatrixDisplay
 #important: need to cast to float type, and order by prediction, else it won't work
 preds_and_labels = predictions.select(['prediction','Survived']).withColumn('Survived', F.col('Survived').cast(FloatType())).orderBy('prediction')
 # select only prediction and label columns
@@ -120,3 +132,4 @@ disp2 = ConfusionMatrixDisplay(cm2)
 disp2.plot()
 plt.title('Confusion Matrix from PySpark')
 plt.show()
+
