@@ -16,6 +16,7 @@ spark = SparkSession.builder \
     .config("spark.executor.cores", "2") \
     .config("spark.driver.memory", "2g")\
     .config("spark.sql.shuffle.partitions", "2")\
+    .config("spark.sql.adaptive.enabled", "true")\
     .getOrCreate()
 
 sc = spark.sparkContext
