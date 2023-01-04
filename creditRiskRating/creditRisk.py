@@ -15,6 +15,7 @@ import pyspark.sql.functions as F
 from pyspark.sql.types import FloatType
 from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
 import pandas as pd
+import numpy as np
 import seaborn as sns
 
 # Create a spark session
@@ -119,7 +120,17 @@ cred_cleansed_df = cred_indexed_df.drop(*categoricalColumns)
 # print(cred_cleansed_df.printSchema())
 # print(cred_cleansed_df.show())
 
+#=====================================
+# Checking target column distribution
+#=====================================
+risk_histogram = cred_cleansed_df.select('riskIndex').rdd.flatMap(lambda x : x).histogram(2)
+pd.DataFrame(list(zip(*risk_histogram)), columns=['bin', 'frequency']).set_index('bin').plot(kind='bar')
+print(cred_cleansed_df.groupBy('riskIndex').count().show())
+plt.show()
+
+#====================
 # Vector Assembler
+#====================
 required_features = cred_cleansed_df.columns[:-1]
 assembler = VectorAssembler(inputCols=required_features, outputCol='features')
 transformed_df = assembler.transform(cred_cleansed_df)
@@ -127,6 +138,7 @@ transformed_df = assembler.transform(cred_cleansed_df)
 
 #========================
 # Feature correlation
+#========================
 # method = pearson, spearman
 corr = Correlation.corr(transformed_df, column='features', method='spearman')
 # print(corr.collect()[0]["pearson({})".format('features')].values)
@@ -141,3 +153,115 @@ sns.heatmap(cor_matrix_df, xticklabels=cor_matrix_df.columns.values,
             yticklabels=cor_matrix_df.columns.values, cmap='Greens', annot=True)
 plt.title('Features correlation')
 plt.show()
+
+#==================
+# Modelling
+#==================
+(train_data, test_data) = transformed_df.randomSplit([0.8, 0.2])
+
+labelColName = 'riskIndex'
+
+# Random Forest
+rf = RandomForestClassifier(labelCol=labelColName, featuresCol='features', maxDepth=7, seed=42)
+model = rf.fit(train_data)
+predictions = model.transform(test_data)
+
+# Logistic Regression
+# family options: auto, binomial, multinomial
+# lr = LogisticRegression(labelCol=labelColName, featuresCol='features', 
+#                         maxIter=10, regParam=0.3, elasticNetParam=0.8, family='binomial')
+# model = lr.fit(train_data)
+# print(f"Coefficient: {model.coefficients}")
+# print(f"Intercept: {model.intercept}")
+# predictions = model.transform(test_data)
+
+
+
+#====================
+# Model Evaluation
+#====================
+evaluator = MulticlassClassificationEvaluator(labelCol=labelColName, predictionCol='prediction', metricName='accuracy')
+accuracy = evaluator.evaluate(predictions)
+# print(f'Test accuracy: {accuracy}')
+
+trainingSummary = model.summary
+# ROC curve
+roc = trainingSummary.roc.toPandas()
+plt.plot(roc['FPR'], roc['TPR'])
+plt.ylabel('True Positive Rate')
+plt.xlabel('False Positive Rate')
+plt.title('ROC Curve')
+plt.show()
+
+# Precision-Recall Curve
+pr = trainingSummary.pr.toPandas()
+plt.plot(pr['recall'], pr['precision'])
+plt.ylabel('Precision')
+plt.xlabel('Recall')
+plt.title('Precision-Recall Curve')
+plt.show()
+
+# metricName options: accuracy, f1, precisionByLabel, recallByLabel
+eval_acc = MulticlassClassificationEvaluator(labelCol=labelColName, predictionCol='prediction', metricName='accuracy')
+eval_pre = MulticlassClassificationEvaluator(labelCol=labelColName, predictionCol='prediction', metricName='precisionByLabel')
+eval_rec = MulticlassClassificationEvaluator(labelCol=labelColName, predictionCol='prediction', metricName='recallByLabel')
+eval_f1 = MulticlassClassificationEvaluator(labelCol=labelColName, predictionCol='prediction', metricName='f1')
+accuracy = eval_acc.evaluate(predictions)
+precision = eval_pre.evaluate(predictions)
+recall = eval_rec.evaluate(predictions)
+f1 = eval_f1.evaluate(predictions)
+
+print(f'Accracy: {accuracy:.2f}')
+print(f'Precision: {precision:.2f}')
+print(f'Recall: {recall:.2f}')
+print(f'f1 score: {f1:.2f}')
+
+# Alternative: using sklearn confusion matrix
+# if the data size is huge, sklearn may not be able to handle
+y_true = predictions.select(labelColName).collect()
+y_pred = predictions.select('prediction').collect()
+
+print(classification_report(y_true, y_pred))
+cm = confusion_matrix(y_true, y_pred)
+disp = ConfusionMatrixDisplay(cm)
+disp.plot()
+plt.title('Confusion Matrix from sklearn')
+plt.show()
+
+# Pyspark way to get confusion matrix but the display part is using the sklearn ConfusionMatrixDisplay
+#important: need to cast to float type, and order by prediction, else it won't work
+# preds_and_labels = predictions.select(['prediction',labelColName]).withColumn(labelColName, F.col(labelColName).cast(FloatType())).orderBy('prediction')
+# # select only prediction and label columns
+# preds_and_labels = preds_and_labels.select(['prediction',labelColName])
+# metrics = MulticlassMetrics(preds_and_labels.rdd.map(tuple))
+# cm2 = metrics.confusionMatrix().toArray()
+# disp2 = ConfusionMatrixDisplay(cm2)
+# disp2.plot()
+# plt.title('Confusion Matrix from PySpark')
+# plt.show()
+
+#======================
+# Feature Importance
+#======================
+def plot_feature_importance(importance, names, model_type):
+    # Create array from feature importances and feature names
+    feature_importance = np.array(importance)
+    feature_names = np.array(names)
+
+    # Create a dataframe using dictionary
+    data = {'feature_names': feature_names, 'feature_importance': feature_importance}
+    fi_df = pd.DataFrame(data)
+
+    # Sort the data frame in order of decreasing importance
+    fi_df.sort_values(by=['feature_importance'], ascending=False, inplace=True)
+    
+    # Define the size of the bar chart
+    plt.figure(figsize=(10,8))
+    sns.barplot(x=fi_df['feature_importance'], y=fi_df['feature_names'])
+    plt.title(f'{model_type} feature importance')
+    plt.xlabel('feature importance')
+    plt.ylabel('features')
+    plt.show()
+
+print(model.featureImportances)
+plot_feature_importance(model.featureImportances, train_data.columns[:-2], 'Random Forest')
