@@ -20,7 +20,7 @@ import seaborn as sns
 
 # Create a spark session
 spark = SparkSession.builder \
-    .appName("Spark Titanic") \
+    .appName("SparkCreditRisk") \
     .config("spark.executor.cores", "2") \
     .config("spark.driver.memory", "2g")\
     .config("spark.sql.shuffle.partitions", "2")\
