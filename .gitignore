@@ -4,3 +4,5 @@
 /creditRiskRating/.ipynb_checkpoints/*
 /pycaretTest/logs.log
 /balancingDataset/.ipynb_checkpoints/*
+# Specifically ignore the large dataset file
+/graphSample/delayedFlights1991.csv

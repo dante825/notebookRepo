@@ -2,6 +2,8 @@
 <p>The purpose of these scripts are for practice purpose.
 Understanding how to train machine learning model in Spark.</p>
 
+<p>Note: Shift + CMD + V to preview the markdown file</p>
+
 ## Biased dataset
 <p>The credit risk dataset is a biased dataset.</p>
 
