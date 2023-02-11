@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from matplotlib.ticker import MaxNLocator
 
-df = pd.read_csv('./graphSample/delayedFlights1991.csv')
+df = pd.read_csv('./graphSample/input/delayedFlights1991.csv')
 
 # Only keep the columns for graph
 df = df[['Month', 'ArrDelay']]
