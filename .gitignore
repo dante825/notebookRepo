@@ -1,4 +1,5 @@
 # All jupyter notebook checkpoints
+.DS_Store
 .ipynb_checkpoints/*
 /pycaretTest/.ipynb_checkpoints/*
 /creditRiskRating/.ipynb_checkpoints/*
@@ -6,3 +7,5 @@
 /balancingDataset/.ipynb_checkpoints/*
 # Specifically ignore the large dataset file
 /graphSample/input/*
+/surveyResult/.DS_Store
+/surveyResult/img/*
