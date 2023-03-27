@@ -2,6 +2,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import seaborn as sns
 from matplotlib.ticker import MaxNLocator
 
 def get_distinct_activity(df):
@@ -12,6 +13,17 @@ def get_distinct_activity(df):
         str_array = activity.split(';')
         str_array.remove('')
         activity_distinct_list.extend(str_array)
+    
+    # Shorten some labels before passing into the plots
+    activity_distinct_list = list(map(lambda x: x.replace('Outdoor Activity e.g. hiking, beach cleanup', 'Outdoor'), activity_distinct_list))
+    activity_distinct_list = list(map(lambda x: x.replace('Family day outing', 'Family day'), activity_distinct_list))
+    activity_distinct_list = list(map(lambda x: x.replace('Badminton Tournament', 'Badminton'), activity_distinct_list))
+    activity_distinct_list = list(map(lambda x: x.replace('Batik painting', 'Batik'), activity_distinct_list))
+    activity_distinct_list = list(map(lambda x: x.replace('Bowling Tournament', 'Bowling'), activity_distinct_list))
+    activity_distinct_list = list(map(lambda x: x.replace('Lunch/Dinner Gathering', 'Lunch'), activity_distinct_list))
+    activity_distinct_list = list(map(lambda x: x.replace('Coral Planting', 'Coral'), activity_distinct_list))
+    activity_distinct_list = list(map(lambda x: x.replace('Soap Making Classes', 'Soap Making'), activity_distinct_list))
+    activity_distinct_list = list(map(lambda x: x.replace('Culinary Classes', 'Culinary'), activity_distinct_list))
     return sorted(set(activity_distinct_list))
 
 
@@ -52,29 +64,16 @@ def plot_dept_composition(df):
 
 
 def plot_activity_count(activity_list, df):
-    # 'Badminton Tournament', 'Batik painting', 'Bowling Tournament', 
-    # 'CSR', 'Camping', 'Coral Planting', 'Culinary Classes', 
-    # 'Family day outing', 'Fun Run', 'Hackathon', 'Lunch/Dinner Gathering', 
-    # 'Movie Night', 'Outdoor Activity e.g. hiking, beach cleanup', 
-    # 'PS5 games', 'Paintball', 'Soap Making Classes', 'Sports Day'
-    activity_count = []
-    for activity in activity_list:
-        cnt = df[activity].sum()
-        activity_count.append(cnt)
-
-    # Shorten some labels before passing into the plots
-    activity_list = list(map(lambda x: x.replace('Outdoor Activity e.g. hiking, beach cleanup', 'Outdoor'), activity_list))
-    activity_list = list(map(lambda x: x.replace('Family day outing', 'Family day'), activity_list))
-    activity_list = list(map(lambda x: x.replace('Badminton Tournament', 'Badminton'), activity_list))
-    activity_list = list(map(lambda x: x.replace('Batik painting', 'Batik'), activity_list))
-    activity_list = list(map(lambda x: x.replace('Bowling Tournament', 'Bowling'), activity_list))
-    activity_list = list(map(lambda x: x.replace('Lunch/Dinner Gathering', 'Meal'), activity_list))
-    activity_list = list(map(lambda x: x.replace('Coral Planting', 'Coral'), activity_list))
-    activity_list = list(map(lambda x: x.replace('Soap Making Classes', 'Soap Making'), activity_list))
-    activity_list = list(map(lambda x: x.replace('Culinary Classes', 'Culinary'), activity_list))
+    # 'Badminton', 'Batik', 'Bowling', 'CSR', 'Camping', 'Coral', 'Culinary', 
+    # 'Family day', 'Fun Run', 'Hackathon', 'Lunch', 'Movie Night', 'Outdoor', 
+    # 'PS5 games', 'Paintball', 'Soap Making', 'Sports Day'
+    activities = df[['Badminton', 'Batik', 'Bowling', 'CSR', 'Camping', 'Coral', 'Culinary', 
+                     'Family day', 'Fun Run', 'Hackathon', 'Lunch', 'Movie Night', 'Outdoor', 
+                     'PS5 games', 'Paintball', 'Soap Making', 'Sports Day']]
+    activities_sum = activities.sum()
 
     fig, ax = plt.subplots(figsize=(13,8), dpi=96)
-    bars = ax.bar(x=activity_list, height=activity_count)
+    bars = ax.bar(x=activities_sum.index, height=activities_sum.values)
     ax.bar_label(bars)
 
     # adding the grids or rulers
@@ -101,6 +100,75 @@ def plot_activity_count(activity_list, df):
     plt.show()
 
 
+def plot_dept_activity_count(activity_list, df):
+    activities = df[['department', 'Badminton', 'Batik', 'Bowling', 'CSR', 'Camping', 'Coral', 'Culinary', 
+                     'Family day', 'Fun Run', 'Hackathon', 'Lunch', 'Movie Night', 'Outdoor', 
+                     'PS5 games', 'Paintball', 'Soap Making', 'Sports Day']]
+    activities_grouped = activities.groupby('department').sum()
+    # print(activities_grouped.head())
+
+    # Melt makes the columns into a value in rows
+    activities_grouped = activities_grouped.reset_index().melt(id_vars=['department'], var_name='activity', value_name='count')
+    # print(activities_grouped.head())
+
+    # fig, axes = plt.subplots(figsize=(13,8), dpi=96, sharey='col')
+    # Can be used to change the figure size of sns.scatterplot and sns.boxplot
+    # sns.set(rc={"figure.figsize":(12, 20)})
+    sns.set_style("whitegrid")
+
+    # Create the count plot
+    #height=8 width=1.5 times the height
+    activity_plt = sns.catplot(x='activity', y='count', hue='department', data=activities_grouped, kind='bar', 
+                               height=7, aspect=1.5, orient='v', legend_out=False, margin_titles=False)\
+        .set(title="Suggested activities grouped by Department")\
+        .set_xticklabels(rotation=20)
+    
+    plt.savefig("/Users/kangwei/development/repo/notebookRepo/surveyResult/img/deptActivityCount.png")
+    plt.show()
+
+
+def plot_frequency_count(df):
+    frequency_df = df[['department', 'frequency']]
+    frequency_list = frequency_df['frequency'].unique()
+    # print(frequency_df.head())
+    # print(frequency_list)
+
+    sns.countplot(data=frequency_df, x='frequency').set(title='Frequency count')
+    plt.savefig("/Users/kangwei/development/repo/notebookRepo/surveyResult/img/frequencyCount.png")
+    plt.show()
+    sns.countplot(data=frequency_df, x='frequency', hue='department').set(title='Dept Frequency count')    
+    plt.savefig("/Users/kangwei/development/repo/notebookRepo/surveyResult/img/deptFrequencyCount.png")
+    plt.show()
+
+
+def plot_weekday_weekend_count(df):
+    tmp_df = df[['department', 'weekdays_weekends']]
+    unique_list = tmp_df['weekdays_weekends'].unique()
+    # print(unique_list)
+    tmp_df = tmp_df.replace('Only on weekends', 'weekends')
+    tmp_df = tmp_df.replace('Only on weekdays', 'weekdays')
+    tmp_df = tmp_df.replace('Either is good, depending on the activities.', 'any')
+
+    sns.countplot(data=tmp_df, x='weekdays_weekends').set(title='Preferred day count')
+    plt.savefig("/Users/kangwei/development/repo/notebookRepo/surveyResult/img/DayCount.png")
+    plt.show()
+    sns.countplot(data=tmp_df, x='weekdays_weekends', hue='department').set(title='Dept Day count')    
+    plt.savefig("/Users/kangwei/development/repo/notebookRepo/surveyResult/img/deptDayCount.png")
+    plt.show()
+
+
+def plot_workshop(df):
+    tmp_df = df[['department', 'attend_workshop']]
+    # unique_list = tmp_df['attend_workshop'].unique()
+    # print(unique_list)
+
+    sns.countplot(data=tmp_df, x='attend_workshop').set(title='Workshop preference')
+    plt.savefig("/Users/kangwei/development/repo/notebookRepo/surveyResult/img/workshopCount.png")
+    plt.show()
+    sns.countplot(data=tmp_df, x='attend_workshop', hue='department').set(title='Workshop preference by Dept')    
+    plt.savefig("/Users/kangwei/development/repo/notebookRepo/surveyResult/img/deptWorkshopCount.png")
+    plt.show()
+
 
 def main():
     df = pd.read_csv('/Users/kangwei/development/repo/notebookRepo/surveyResult/survey.csv', header=0)
@@ -109,20 +177,21 @@ def main():
     # 2. make the activities into columns
     # 3. visualization 1: composition of participants
     # 4. visualization 2: activity count
+    # 5. visualization 3: activity with department count
     activity_list = get_distinct_activity(df)
     # print(activity_list)
     for activity in activity_list:
         df[activity] = df['activity'].str.contains(activity)
     
     # plot_dept_composition(df)
-    plot_activity_count(activity_list, df)
+    # plot_activity_count(activity_list, df)
+    # plot_dept_activity_count(activity_list, df)
+    # plot_frequency_count(df)
+    # plot_weekday_weekend_count(df)
+    # plot_workshop(df)
 
 
 
 if __name__ == '__main__':
     main()
-
-
-
-
 
