@@ -9,3 +9,5 @@
 /graphSample/input/*
 /surveyResult/.DS_Store
 /surveyResult/img/*
+/regressionModelAndEvaluation/data/*
+/regressionModelAndEvaluation/images/*
